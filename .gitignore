@@ -1,0 +1,24 @@
+# Environment variables & secrets (NEVER COMMIT)
+.env
+.env.*
+!.env.example
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# Local Vector Storage
+qdrant_store/
+
+# Virtual Environments
+venv/
+.venv/
+env/
+
+# IDE / OS Files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
