@@ -1,0 +1,75 @@
+{
+  "timestamp": "20260907_094647",
+  "model": "openai/gpt-oss-120b",
+  "embeddings": "all-MiniLM-L6-v2",
+  "retriever": "Qdrant (k=4, Cosine)",
+  "averages": {
+    "faithfulness": 1.0,
+    "answer_relevancy": 1.0,
+    "context_recall": 1.0,
+    "context_precision": 0.83,
+    "overall_score": 0.958
+  },
+  "questions": [
+    {
+      "id": "Q1",
+      "question": "What prompt instructions and background style are specified for the hair oil brand image post generation in Topic 19?",
+      "ground_truth": "In Topic 19, the prompt instructs to create a premium Instagram post design for a hair oil brand. Use the provided product image exactly as it is without altering the product. Change the background to keep the design clean and luxurious, and add the text: 'Introducing Hair Oil'.",
+      "answer": "**Prompt instructions (Topic 19):**  \n- Create a premium Instagram post (1:1 square).  \n- Use the supplied hair‑oil product image **exactly as‑is** (no alterations).  \n- Replace the background with a new one.  \n- Keep the overall design clean, luxurious, simple and not overcrowded.  \n- Add the two text lines:  \n  1. “Introducing Hayat Roots Hair Oil”  \n  2. “The Ultimate Solution for Healthier Hair”  \n- Use modern, elegant fonts; balance the text so it is visually appealing.  \n- Aim for a natural, premium, high‑end‑skincare‑inspired look.\n\n**Background style specified:** a clean, luxurious background that feels natural and high‑end (skincare‑inspired), rather than busy or cluttered.",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "context_recall": 1.0,
+      "context_precision": 0.75,
+      "overall_score": 0.938,
+      "reasoning": "The answer accurately reflects all details from the retrieved context and fully addresses the question; the context contains the needed facts but also includes unrelated sections, lowering precision."
+    },
+    {
+      "id": "Q2",
+      "question": "What are the ad copy requirements and call-to-action phrases for the men's perfume 'Junoon' Google Search Ad Campaign in Topic 93?",
+      "ground_truth": "In Topic 93, the prompt asks to act as an expert Google Ads copywriter writing high-converting search ad copy for a men's perfume called 'Junoon' inspired by aromastudio. It must include strong call-to-action phrases such as 'Shop Now', 'Order Today', and 'Try Junoon', targeting men looking for premium perfumes.",
+      "answer": "**Ad copy requirements (Topic 93):**  \n- **Headlines:** 15 total, each ≤ 30 characters.  \n- **Descriptions:** 4 total, each ≤ 90 characters.  \n- **Focus:** benefits, masculinity, attraction, long‑lasting fragrance.  \n- **Tone:** persuasive, high‑CTR, targeting men seeking premium perfume.  \n\n**Required call‑to‑action phrases:**  \n- “Shop Now”  \n- “Order Today”  \n- “Try Junoon”",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "context_recall": 1.0,
+      "context_precision": 0.6,
+      "overall_score": 0.9,
+      "reasoning": "The answer accurately reflects the requirements and CTA phrases stated in the retrieved context, fully addressing the question; however the retrieved context contains unrelated material (Topic 117), reducing precision."
+    },
+    {
+      "id": "Q3",
+      "question": "What role and years of experience are specified for the Facebook Marketing Strategy prompt in Topic 56?",
+      "ground_truth": "In Topic 56, the prompt specifies acting as a senior Meta (Facebook) Ads strategist with 8+ years of experience managing high-performing e-commerce and lead generation campaigns to create a complete step-by-step Facebook paid ads strategy.",
+      "answer": "**Role:** Senior Meta (Facebook) Ads strategist  \n**Years of experience:** 8 + years.",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "context_recall": 1.0,
+      "context_precision": 0.9,
+      "overall_score": 0.975,
+      "reasoning": "The answer exactly matches the role and experience stated in the retrieved context, fully addressing the question; the context contains the needed facts but also includes unrelated Google Ads material, slightly lowering precision."
+    },
+    {
+      "id": "Q4",
+      "question": "What animation effects and background aesthetic are requested for the perfume promotional video in Topic 21?",
+      "ground_truth": "In Topic 21, the prompt instructs to create a cinematic product video turning a static perfume image into smooth animations with slow zoom, subtle rotation, light reflections, and floating particles or mist effect, using a luxury-inspired background with dark elegant tones like black, navy, or deep brown with soft lighting.",
+      "answer": "The requested animation effects are **slow zoom, subtle rotation, light reflections, floating particles, and a mist effect**.  \nThe background should be **luxury‑inspired—dark, elegant tones such as black, navy, or deep brown with soft lighting** (creating a premium, cinematic atmosphere).",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "context_recall": 1.0,
+      "context_precision": 0.9,
+      "overall_score": 0.975,
+      "reasoning": "The answer exactly matches the animation effects and background aesthetic described in the retrieved context, fully addressing the question; the context contains all needed facts with minimal extraneous material."
+    },
+    {
+      "id": "Q5",
+      "question": "What landing page destination URL and previous campaign challenges are noted for the TikTok Ads Strategy in Topic 85?",
+      "ground_truth": "In Topic 85, the destination URL is www.digiskills.pk, and the business noted that they previously ran some TikTok campaigns but experienced poor ROAS. The prompt asks a senior performance marketing strategist with 8+ years experience to build a detailed strategy.",
+      "answer": "- **Landing page destination URL:** www.digiskills.pk  \n- **Previous campaign challenge:** Ran TikTok ads before but achieved poor ROAS.",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "context_recall": 1.0,
+      "context_precision": 1.0,
+      "overall_score": 1.0,
+      "reasoning": "The answer exactly matches the retrieved context, providing the URL and the poor ROAS challenge, fully addressing the question with no hallucination."
+    }
+  ]
+}

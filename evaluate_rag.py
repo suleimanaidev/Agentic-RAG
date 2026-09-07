@@ -16,6 +16,7 @@ import os
 import sys
 import json
 import time
+import re
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
@@ -26,7 +27,8 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-load_dotenv()
+env_path = Path(__file__).resolve().parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -135,6 +137,61 @@ Provide your judgment in STRICT JSON format with no additional text or Markdown 
 )
 
 
+def evaluate_sample_with_judge(judge_chain, payload: dict, max_retries: int = 6) -> dict:
+    """
+    Executes exact LLM-as-a-judge evaluation without any fallback.
+    Retries gracefully with rate-limit backoff until exact scores and reasoning are obtained.
+    """
+    for attempt in range(max_retries):
+        try:
+            judge_raw = judge_chain.invoke(payload).strip()
+
+            # Clean markdown code blocks if present
+            cleaned = judge_raw
+            if "```" in cleaned:
+                m = re.search(r"```(?:json)?\s*(.*?)\s*```", cleaned, re.DOTALL)
+                if m:
+                    cleaned = m.group(1).strip()
+                else:
+                    lines = cleaned.split("\n")
+                    cleaned = "\n".join(l for l in lines if not l.strip().startswith("```")).strip()
+
+            # Extract outermost JSON block
+            m_brace = re.search(r"(\{.*\})", cleaned, re.DOTALL)
+            if m_brace:
+                cleaned = m_brace.group(1).strip()
+
+            scores = json.loads(cleaned)
+
+            required_keys = ["faithfulness", "answer_relevancy", "context_recall", "context_precision"]
+            if all(k in scores for k in required_keys):
+                # Ensure values are valid floats clamped in [0.0, 1.0]
+                for k in required_keys:
+                    scores[k] = max(0.0, min(1.0, float(scores[k])))
+                if "reasoning" not in scores or not scores["reasoning"]:
+                    scores["reasoning"] = "Evaluated directly by LLM judge."
+                return scores
+            else:
+                print(f"  [!] Missing expected keys in judge output: {list(scores.keys())}. Retrying...")
+
+        except Exception as e:
+            err_msg = str(e)
+            print(f"  [!] Judge evaluation attempt {attempt + 1}/{max_retries} encountered error: {err_msg[:140]}")
+
+            # Calculate sleep duration (respect Groq rate limit reset if provided)
+            wait_sec = 10 * (attempt + 1)
+            time_match = re.search(r"try again in (\d+(?:\.\d+)?)s", err_msg)
+            if time_match:
+                wait_sec = max(wait_sec, float(time_match.group(1)) + 2.0)
+
+            print(f"  -> Pausing {wait_sec:.1f}s before retrying to ensure exact results...")
+            time.sleep(wait_sec)
+
+    raise RuntimeError(
+        "Evaluation failed to obtain exact LLM judge output after retries. Fallback is disabled."
+    )
+
+
 def run_rag_evaluation():
     print("=" * 70)
     print("[*] NEXUS-AI RAG PIPELINE BENCHMARK EVALUATION")
@@ -158,15 +215,24 @@ def run_rag_evaluation():
         embedding=embeddings,
     )
 
-    llm = ChatOpenAI(
+    # Generation LLM
+    generator_llm = ChatOpenAI(
         model="openai/gpt-oss-120b",
         api_key=groq_key,
         base_url="https://api.groq.com/openai/v1",
         temperature=0.1,
     )
+    rag_chain = RAG_SYSTEM_PROMPT | generator_llm | StrOutputParser()
 
-    rag_chain = RAG_SYSTEM_PROMPT | llm | StrOutputParser()
-    judge_chain = JUDGE_PROMPT | llm | StrOutputParser()
+    # Judge LLM with native JSON mode for exact metric evaluation
+    judge_llm = ChatOpenAI(
+        model="openai/gpt-oss-120b",
+        api_key=groq_key,
+        base_url="https://api.groq.com/openai/v1",
+        temperature=0.0,
+        model_kwargs={"response_format": {"type": "json_object"}},
+    )
+    judge_chain = JUDGE_PROMPT | judge_llm | StrOutputParser()
 
     results = []
     print("\nStarting evaluation of 5 benchmark questions...\n" + "-" * 70)
@@ -178,6 +244,9 @@ def run_rag_evaluation():
 
         print(f"\n[{qid}] Question: {question}")
 
+        # Add pause between questions to respect Groq rate limits
+        time.sleep(4)
+
         # Step A: Vector Retrieval (Top k=4)
         retrieved_docs = vectorstore.similarity_search(question, k=4)
         context_str = "\n\n---\n\n".join([d.page_content for d in retrieved_docs])
@@ -187,55 +256,26 @@ def run_rag_evaluation():
         gen_answer = rag_chain.invoke({"context": context_str, "question": question}).strip()
         print(f"  -> Generated Answer: {gen_answer[:120]}...")
 
-        # Step C: Metric Evaluation via LLM Judge (with exponential retry)
-        scores = None
-        for attempt in range(3):
-            try:
-                # Add delay between calls to respect Groq free-tier TPM limits
-                time.sleep(3)
-                judge_raw = judge_chain.invoke({
-                    "question": question,
-                    "ground_truth": gt,
-                    "context": context_str,
-                    "answer": gen_answer,
-                }).strip()
+        # Step C: Exact Metric Evaluation via LLM Judge (Zero Fallback)
+        time.sleep(3)
+        scores = evaluate_sample_with_judge(
+            judge_chain,
+            {
+                "question": question,
+                "ground_truth": gt,
+                "context": context_str,
+                "answer": gen_answer,
+            },
+        )
 
-                # Clean JSON formatting if code blocks returned
-                if judge_raw.startswith("```"):
-                    lines = judge_raw.split("\n")
-                    if lines[0].startswith("```"):
-                        lines = lines[1:]
-                    if lines and lines[-1].startswith("```"):
-                        lines = lines[:-1]
-                    judge_raw = "\n".join(lines).strip()
-
-                scores = json.loads(judge_raw)
-                break
-            except Exception as e:
-                if "429" in str(e) or "rate_limit" in str(e).lower():
-                    wait_sec = 6 * (attempt + 1)
-                    print(f"  [!] Groq rate limit hit. Pausing {wait_sec}s before retry...")
-                    time.sleep(wait_sec)
-                else:
-                    break
-
-        if not scores:
-            scores = {
-                "faithfulness": 0.95,
-                "answer_relevancy": 0.95,
-                "context_recall": 0.90,
-                "context_precision": 0.85,
-                "reasoning": "Evaluated successfully with heuristic baseline.",
-            }
-
-        f = float(scores.get("faithfulness", 0.0))
-        ar = float(scores.get("answer_relevancy", 0.0))
-        cr = float(scores.get("context_recall", 0.0))
-        cp = float(scores.get("context_precision", 0.0))
+        f = float(scores["faithfulness"])
+        ar = float(scores["answer_relevancy"])
+        cr = float(scores["context_recall"])
+        cp = float(scores["context_precision"])
         composite = round((f + ar + cr + cp) / 4.0, 3)
 
-        print(f"  -> Scores: Faithfulness: {f:.2f} | Relevancy: {ar:.2f} | Recall: {cr:.2f} | Precision: {cp:.2f} => Overall: {composite:.3f}")
-        print(f"  -> Reasoning: {scores.get('reasoning', 'N/A')}")
+        print(f"  -> Exact Scores: Faithfulness: {f:.2f} | Relevancy: {ar:.2f} | Recall: {cr:.2f} | Precision: {cp:.2f} => Overall: {composite:.3f}")
+        print(f"  -> Judge Reasoning: {scores.get('reasoning', 'N/A')}")
 
         results.append({
             "id": qid,
