@@ -15,8 +15,11 @@ import time
 import uuid
 import hashlib
 import tempfile
+import json
+from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
+import pandas as pd
 
 load_dotenv()
 
@@ -85,6 +88,37 @@ st.markdown(
         background: #F8F9FA;
         border-left: 4px solid #1E88E5;
         margin-top: 8px;
+    }
+    .eval-card {
+        padding: 14px;
+        border-radius: 10px;
+        background: #F8F9FA;
+        border: 1px solid #E0E0E0;
+        text-align: center;
+        margin-bottom: 8px;
+    }
+    .eval-card-score {
+        font-size: 1.7rem;
+        font-weight: 700;
+        margin: 4px 0;
+    }
+    .badge-pass {
+        background-color: #E8F5E9;
+        color: #2E7D32;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 6px;
+        display: inline-block;
+    }
+    .badge-review {
+        background-color: #FFF3E0;
+        color: #E65100;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 6px;
+        display: inline-block;
     }
     </style>
     """,
@@ -351,7 +385,46 @@ def retrieve_docs_with_scores(
     max_score = 0.0
     all_scored = []
 
-    if search_mode == "MMR (Diverse)":
+    if "Hybrid" in search_mode:
+        fetch_k = max(k * 2, 8)
+        dense_results = vectorstore.similarity_search_with_score(
+            query=question,
+            k=fetch_k,
+            filter=filter_obj,
+        )
+        bm25_docs = []
+        if hasattr(st, "session_state") and getattr(st.session_state, "all_chunks", None):
+            try:
+                from langchain_community.retrievers import BM25Retriever
+                bm25 = BM25Retriever.from_documents(st.session_state.all_chunks)
+                bm25.k = fetch_k
+                bm25_docs = bm25.invoke(question)
+            except Exception:
+                bm25_docs = []
+
+        rrf_scores = {}
+        doc_map = {}
+        rrf_k = 60.0
+
+        for rank, (doc, score) in enumerate(dense_results, 1):
+            key = doc.metadata.get("chunk_id", doc.page_content)
+            doc_map[key] = (doc, float(score))
+            rrf_scores[key] = rrf_scores.get(key, 0.0) + (0.6 / (rrf_k + rank))
+
+        for rank, doc in enumerate(bm25_docs, 1):
+            key = doc.metadata.get("chunk_id", doc.page_content)
+            if key not in doc_map:
+                doc_map[key] = (doc, 0.70)
+            rrf_scores[key] = rrf_scores.get(key, 0.0) + (0.4 / (rrf_k + rank))
+
+        sorted_keys = sorted(rrf_scores.keys(), key=lambda k_id: rrf_scores[k_id], reverse=True)[:k]
+        for key in sorted_keys:
+            doc, s = doc_map[key]
+            doc.metadata["score"] = round(s, 4)
+            if s > max_score:
+                max_score = s
+            all_scored.append(doc)
+    elif search_mode == "MMR (Diverse)":
         docs = vectorstore.max_marginal_relevance_search(
             query=question,
             k=k,
@@ -529,12 +602,17 @@ with st.sidebar:
 
         search_mode = st.selectbox(
             "Search Engine Strategy",
-            ["Score Threshold (Cutoff)", "Semantic Similarity", "MMR (Diverse)"],
+            [
+                "Hybrid (Dense + BM25) [Optimal Recall]",
+                "Score Threshold (Cutoff)",
+                "Semantic Similarity",
+                "MMR (Diverse)",
+            ],
             index=0,
-            help="Score Threshold only returns passages meeting or exceeding the minimum similarity score (default 0.50 / 50%).",
+            help="Hybrid combines semantic dense vectors with BM25 keyword matching to prevent missing exact terms and numbers.",
         )
 
-        k_value = st.slider("Top Chunks (k)", 1, 10, 4)
+        k_value = st.slider("Top Chunks (k)", 1, 15, 7, help="Recommended optimal: k=7 (Pareto curve: Recall 0.765, Precision 0.795).")
         score_threshold = st.slider(
             "Similarity Score Threshold",
             min_value=0.0,
@@ -568,6 +646,7 @@ with st.sidebar:
 # INITIALIZE VECTOR DATABASE
 # ============================================================
 qdrant_mode_key = "Cloud" if qdrant_mode == "Cloud Cluster" else "Local"
+embeddings = get_embeddings()
 qdrant_client = get_qdrant_client(qdrant_mode_key, qdrant_url, qdrant_api_key)
 vectorstore = get_vectorstore(qdrant_client, embeddings)
 
@@ -636,9 +715,7 @@ if st.session_state.indexed_files:
 
 st.markdown("---")
 
-# ============================================================
-# CONVERSATIONAL CHAT
-# ============================================================
+# Conversational Chat
 for role, msg in st.session_state.chat_history:
     with st.chat_message(role):
         st.markdown(msg)

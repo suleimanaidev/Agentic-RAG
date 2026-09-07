@@ -10,3 +10,5 @@ sentence-transformers>=3.0.0
 pypdf>=4.2.0
 docx2txt>=0.8
 python-dotenv>=1.0.0
+pandas>=2.0.0
+rank_bm25>=0.2.2
