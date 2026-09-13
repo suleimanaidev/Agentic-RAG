@@ -779,8 +779,11 @@ if question:
                     )
                 answer = st.write_stream(stream_text(raw_text))
             else:
-                # 5. STREAMING GENERATION VIA LCEL
+                # 5. STREAMING GENERATION VIA LCEL (token-by-token display)
+                status_holder = st.empty()
+                status_holder.markdown("💭 *Generating answer, please wait...*")
                 rag_chain = build_rag_chain(api_key, base_url, model_name)
                 context_str = format_docs(retrieved_docs)
                 answer = st.write_stream(rag_chain.stream({"context": context_str, "question": question}))
+                status_holder.empty()
             st.session_state.chat_history.append(("assistant", answer))
