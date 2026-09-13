@@ -247,8 +247,8 @@ def run_rag_evaluation():
         # Add pause between questions to respect Groq rate limits
         time.sleep(4)
 
-        # Step A: Vector Retrieval (Top k=4)
-        retrieved_docs = vectorstore.similarity_search(question, k=4)
+        # Step A: Vector Retrieval (Top k=8)
+        retrieved_docs = vectorstore.similarity_search(question, k=8)
         context_str = "\n\n---\n\n".join([d.page_content for d in retrieved_docs])
         print(f"  -> Retrieved Chunks: {len(retrieved_docs)} (Total Characters: {len(context_str)})")
 
@@ -322,7 +322,7 @@ def run_rag_evaluation():
         "timestamp": timestamp,
         "model": "openai/gpt-oss-120b",
         "embeddings": "all-MiniLM-L6-v2",
-        "retriever": "Qdrant (k=4, Cosine)",
+        "retriever": "Qdrant (k=8, Cosine)",
         "averages": {
             "faithfulness": avg_f,
             "answer_relevancy": avg_ar,

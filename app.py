@@ -607,7 +607,7 @@ with st.sidebar:
             help="Hybrid combines semantic dense vectors with BM25 keyword matching to prevent missing exact terms and numbers.",
         )
 
-        k_value = st.slider("Top Chunks (k)", 1, 15, 7, help="Recommended optimal: k=7 (Pareto curve: Recall 0.765, Precision 0.795).")
+        k_value = st.slider("Top Chunks (k)", 1, 15, 8, help="Recommended optimal: k=8 (boosts context recall in RAGAS evaluation).")
         score_threshold = st.slider(
             "Similarity Score Threshold",
             min_value=0.0,
