@@ -1,0 +1,75 @@
+{
+  "timestamp": "20260924_015239",
+  "model": "openai/gpt-oss-120b",
+  "embeddings": "all-MiniLM-L6-v2",
+  "retriever": "Qdrant (k=8, Cosine)",
+  "averages": {
+    "faithfulness": 0.97,
+    "answer_relevancy": 0.992,
+    "context_recall": 0.996,
+    "context_precision": 0.654,
+    "overall_score": 0.903
+  },
+  "questions": [
+    {
+      "id": "Q1",
+      "question": "What is the purpose of the WHO ECDD Surveillance List, and what happens once a substance is placed on it?",
+      "ground_truth": "A substance is placed on the WHO ECDD Surveillance List if the Committee considers the evidence of the impact of a new psychoactive substance (NPS) in causing substantial harm to health too scarce to recommend placement under international control. If the substance has therapeutic applications (is a psychotropic medicine), the Committee weighs the therapeutic benefits against the evidence of harm, considering the availability of alternative medicines. The ECDD Secretariat then actively monitors whether additional data on the harm of the substance becomes available to justify a subsequent critical review.",
+      "answer": "**Purpose of the WHO ECDD Surveillance List**  \nThe list is used to keep under observation those new psychoactive substances (or psychotropic medicines) for which the evidence of health‑harm or abuse potential is currently insufficient to justify international control. It allows the Committee to weigh any therapeutic benefits against the limited harm data and to watch for emerging information.\n\n**What happens after a substance is placed on the list**  \n- The WHO ECDD Secretariat actively monitors the substance, collecting new data on misuse, dependence, withdrawal, intoxications, and any public‑health or social problems.  \n- If additional evidence of substantial harm emerges, the substance can be brought forward for a **critical review** and possibly be recommended for international control.  \n- Until such a review, the substance remains under surveillance but is not placed under control measures.",
+      "faithfulness": 0.85,
+      "answer_relevancy": 0.96,
+      "context_recall": 0.98,
+      "context_precision": 0.62,
+      "overall_score": 0.853,
+      "reasoning": "The answer correctly captures the list’s purpose and monitoring process, but adds details not explicitly in the retrieved text, lowering faithfulness; it fully addresses the question; the context contains the needed facts but is cluttered with many substance entries, reducing precision."
+    },
+    {
+      "id": "Q2",
+      "question": "What adverse effects and abuse-related harms are reported for gabapentin, and what is its surveillance status under the ECDD?",
+      "ground_truth": "Gabapentin is used therapeutically as an anticonvulsant or antiepileptic drug and may also be used in the treatment of nerve pain. It has been brought to WHO's attention that gabapentin may be being misused in some Member States. Adverse effects associated with gabapentin include hypoventilation, respiratory failure, myopathy, self-harm behaviour, suicidal behaviour, somnolence, dizziness and drowsiness. Gabapentin has been associated with several cases of abuse and drug-related harm (for example suicide). To date, gabapentin has not been pre- or critically reviewed by the ECDD. It was added to the surveillance list by the 2nd Working Group meeting (2017).",
+      "answer": "**Adverse effects reported for gabapentin**  \n- Hypoventilation  \n- Respiratory failure  \n- Myopathy  \n- Self‑harm behaviour  \n- Suicidal behaviour  \n- Somnolence  \n- Dizziness  \n- Drowsiness  \n\n**Abuse‑related harms**  \n- Cases of misuse/abuse reported in several Member States  \n- Drug‑related harm including suicide  \n\n**Surveillance status**  \n- Gabapentin was placed on the WHO ECDD Surveillance List at the 2nd Working Group meeting in 2017.  \n- It has not undergone a pre‑review or critical review by the ECDD.",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "context_recall": 1.0,
+      "context_precision": 0.65,
+      "overall_score": 0.912,
+      "reasoning": "The answer is fully supported by the retrieved context and addresses all parts of the question, while the context contains substantial unrelated information, lowering precision."
+    },
+    {
+      "id": "Q3",
+      "question": "What are the reported effects of 4-Fluoromethcathinone (flephedrone; 4-FMC) and what did the 36th ECDD recommend for it?",
+      "ground_truth": "4-Fluoromethcathinone (flephedrone; 4-FMC) is being misused in a number of Member States, is clandestinely manufactured and has been identified in seized products. 4-FMC produces effects similar to psychomotor stimulants such as cocaine and methamphetamine, although it appears to be less potent than methamphetamine. It has been associated with a few fatal and non-fatal intoxications. Owing to the insufficiency of data regarding dependence, abuse and risks to public health, the 36th ECDD recommended that 4-FMC not be placed under international control at this time but be kept under surveillance.",
+      "answer": "**Reported effects:** 4‑Fluoromethcathinone (flephedrone; 4‑FMC) produces psychomotor‑stimulant effects similar to cocaine and methamphetamine, though it appears less potent than methamphetamine. It has been linked to a small number of fatal and non‑fatal intoxications.\n\n**36th ECDD recommendation:** The 36th WHO Expert Committee on Drug Dependence (ECDD) advised that 4‑FMC not be placed under international control at this time, but that it be kept under surveillance.",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "context_recall": 1.0,
+      "context_precision": 0.75,
+      "overall_score": 0.938,
+      "reasoning": "The answer fully matches the retrieved passage and covers both effects and the 36th ECDD recommendation; the retrieved context includes the needed facts but also contains unrelated substance entries, lowering precision."
+    },
+    {
+      "id": "Q4",
+      "question": "Why did the 41st ECDD decide not to schedule tramadol, and what did it recommend instead?",
+      "ground_truth": "The 41st ECDD was strongly of the view that the extent of tramadol abuse and the evidence of public health risks associated with tramadol warranted consideration of scheduling. However, it recommended that tramadol not be scheduled at this time in order to avoid an adverse impact on access to this medication, especially in countries where tramadol may be the only available opioid analgesic, or in crisis situations where there is little or no access at all to other opioids. The 41st ECDD also strongly urged WHO and its partners to address the grossly inadequate access to and availability of opioid pain medication in low-income countries, and recommended that the WHO Secretariat continue to keep tramadol under surveillance, collect information on the extent of problems associated with tramadol misuse and its medical use, and consider tramadol for review at a future meeting.",
+      "answer": "The 41st ECDD concluded that, although tramadol’s abuse and public‑health risks were growing, placing it under international control could **cut off access to the only opioid analgesic available in many low‑income or crisis settings**. To avoid jeopardising pain‑relief treatment, it chose **not to schedule tramadol**.\n\nInstead, the Committee recommended that WHO and its partners:\n\n* Keep tramadol **under surveillance** and collect data on misuse and medical use, with a view to a future review.  \n* Prioritise **improving access to essential opioid pain medicines** in low‑income countries.  \n* **Update and disseminate WHO pain‑management guidelines** and support country‑specific capacity‑building, prevention, and treatment programmes to address the tramadol crisis.  \n* **Strengthen regulatory capacity** to prevent the supply and use of falsified or substandard tramadol.",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "context_recall": 1.0,
+      "context_precision": 0.65,
+      "overall_score": 0.912,
+      "reasoning": "The answer is fully supported by the retrieved passages and directly answers the why and what, matching the ground truth; however the retrieved context contains substantial unrelated material about other substances, reducing precision."
+    },
+    {
+      "id": "Q5",
+      "question": "What adverse effects are associated with AMT (Alpha-methyltryptamine) and what did the 36th ECDD recommend for it?",
+      "ground_truth": "AMT (Alpha-methyltryptamine) is a tryptamine derivative that shares several similarities with the Schedule I tryptamine hallucinogens. Adverse effects of AMT include mild increases in blood pressure or respiration rate, restlessness, tachycardia, severe nausea, severe vomiting, impaired coordination, and visual and auditory disturbances and distortions. AMT has been associated with fatal intoxications, although other drugs were present. The 36th ECDD (June 2014) recommended that, due to the insufficiency of evidence required to satisfy the criteria for international scheduling under the Conventions, AMT not be placed under international control but be kept under surveillance.",
+      "answer": "**Adverse effects of AMT (Alpha‑methyltryptamine)**  \n- Mild increases in blood pressure or respiration rate  \n- Restlessness and tachycardia  \n- Severe nausea and vomiting  \n- Impaired coordination  \n- Visual and auditory disturbances/distortions  \n- Associated with fatal intoxications (often with other drugs present)\n\n**36th ECDD recommendation (June 2014)**  \nThe Committee concluded that evidence was insufficient to meet the criteria for international scheduling, so AMT was **not placed under international control** but was **kept under WHO surveillance**.",
+      "faithfulness": 1.0,
+      "answer_relevancy": 1.0,
+      "context_recall": 1.0,
+      "context_precision": 0.6,
+      "overall_score": 0.9,
+      "reasoning": "The answer is fully supported by the retrieved passage and directly answers the question, while the passage contains a lot of extraneous information about other substances, lowering precision."
+    }
+  ]
+}

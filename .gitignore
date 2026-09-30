@@ -11,6 +11,8 @@ __pycache__/
 
 # Local Vector Storage
 qdrant_store/
+qdrant_store_hybrid_demo/
+.streamlit/secrets.toml
 
 # Virtual Environments
 venv/
