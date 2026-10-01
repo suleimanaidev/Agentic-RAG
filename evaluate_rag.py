@@ -1,8 +1,10 @@
 """
 RAG Evaluation Framework
 ========================
-Evaluates RAG pipeline performance on 5 benchmark domain questions using
-retrieval against Qdrant Cloud vector database and Groq LLM (openai/gpt-oss-120b).
+Evaluates RAG pipeline performance on 5 benchmark questions derived from the
+WHO "Substances under Surveillance" report
+(who_substances_surveillance.pdf) using retrieval against Qdrant Cloud vector
+database and Groq LLM (openai/gpt-oss-120b).
 
 Metrics Evaluated:
 1. Faithfulness (Groundedness / Hallucination-free score)
@@ -17,6 +19,7 @@ import sys
 import json
 import time
 import re
+import math
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
@@ -44,51 +47,73 @@ from langchain_core.output_parsers import StrOutputParser
 BENCHMARK_TESTSET = [
     {
         "id": "Q1",
-        "question": "What prompt instructions and background style are specified for the hair oil brand image post generation in Topic 19?",
+        "question": "What is the purpose of the WHO ECDD Surveillance List, and what happens once a substance is placed on it?",
         "ground_truth": (
-            "In Topic 19, the prompt instructs to create a premium Instagram post design for a hair oil brand. "
-            "Use the provided product image exactly as it is without altering the product. Change the background "
-            "to keep the design clean and luxurious, and add the text: 'Introducing Hair Oil'."
+            "A substance is placed on the WHO ECDD Surveillance List if the Committee considers the evidence of the impact "
+            "of a new psychoactive substance (NPS) in causing substantial harm to health too scarce to recommend placement "
+            "under international control. If the substance has therapeutic applications (is a psychotropic medicine), the "
+            "Committee weighs the therapeutic benefits against the evidence of harm, considering the availability of "
+            "alternative medicines. The ECDD Secretariat then actively monitors whether additional data on the harm of the "
+            "substance becomes available to justify a subsequent critical review."
         ),
     },
     {
         "id": "Q2",
-        "question": "What are the ad copy requirements and call-to-action phrases for the men's perfume 'Junoon' Google Search Ad Campaign in Topic 93?",
+        "question": "What adverse effects and abuse-related harms are reported for gabapentin, and what is its surveillance status under the ECDD?",
         "ground_truth": (
-            "In Topic 93, the prompt asks to act as an expert Google Ads copywriter writing high-converting search ad copy "
-            "for a men's perfume called 'Junoon' inspired by aromastudio. It must include strong call-to-action phrases "
-            "such as 'Shop Now', 'Order Today', and 'Try Junoon', targeting men looking for premium perfumes."
+            "Gabapentin is used therapeutically as an anticonvulsant or antiepileptic drug and may also be used in the "
+            "treatment of nerve pain. It has been brought to WHO's attention that gabapentin may be being misused in some "
+            "Member States. Adverse effects associated with gabapentin include hypoventilation, respiratory failure, "
+            "myopathy, self-harm behaviour, suicidal behaviour, somnolence, dizziness and drowsiness. Gabapentin has been "
+            "associated with several cases of abuse and drug-related harm (for example suicide). To date, gabapentin has "
+            "not been pre- or critically reviewed by the ECDD. It was added to the surveillance list by the 2nd Working "
+            "Group meeting (2017)."
         ),
     },
     {
         "id": "Q3",
-        "question": "What role and years of experience are specified for the Facebook Marketing Strategy prompt in Topic 56?",
+        "question": "What are the reported effects of 4-Fluoromethcathinone (flephedrone; 4-FMC) and what did the 36th ECDD recommend for it?",
         "ground_truth": (
-            "In Topic 56, the prompt specifies acting as a senior Meta (Facebook) Ads strategist with 8+ years of experience "
-            "managing high-performing e-commerce and lead generation campaigns to create a complete step-by-step Facebook paid ads strategy."
+            "4-Fluoromethcathinone (flephedrone; 4-FMC) is being misused in a number of Member States, is clandestinely "
+            "manufactured and has been identified in seized products. 4-FMC produces effects similar to psychomotor "
+            "stimulants such as cocaine and methamphetamine, although it appears to be less potent than methamphetamine. "
+            "It has been associated with a few fatal and non-fatal intoxications. Owing to the insufficiency of data "
+            "regarding dependence, abuse and risks to public health, the 36th ECDD recommended that 4-FMC not be placed "
+            "under international control at this time but be kept under surveillance."
         ),
     },
     {
         "id": "Q4",
-        "question": "What animation effects and background aesthetic are requested for the perfume promotional video in Topic 21?",
+        "question": "Why did the 41st ECDD decide not to schedule tramadol, and what did it recommend instead?",
         "ground_truth": (
-            "In Topic 21, the prompt instructs to create a cinematic product video turning a static perfume image into smooth animations "
-            "with slow zoom, subtle rotation, light reflections, and floating particles or mist effect, using a luxury-inspired background "
-            "with dark elegant tones like black, navy, or deep brown with soft lighting."
+            "The 41st ECDD was strongly of the view that the extent of tramadol abuse and the evidence of public health "
+            "risks associated with tramadol warranted consideration of scheduling. However, it recommended that tramadol "
+            "not be scheduled at this time in order to avoid an adverse impact on access to this medication, especially in "
+            "countries where tramadol may be the only available opioid analgesic, or in crisis situations where there is "
+            "little or no access at all to other opioids. The 41st ECDD also strongly urged WHO and its partners to address "
+            "the grossly inadequate access to and availability of opioid pain medication in low-income countries, and "
+            "recommended that the WHO Secretariat continue to keep tramadol under surveillance, collect information on the "
+            "extent of problems associated with tramadol misuse and its medical use, and consider tramadol for review at a "
+            "future meeting."
         ),
     },
     {
         "id": "Q5",
-        "question": "What landing page destination URL and previous campaign challenges are noted for the TikTok Ads Strategy in Topic 85?",
+        "question": "What adverse effects are associated with AMT (Alpha-methyltryptamine) and what did the 36th ECDD recommend for it?",
         "ground_truth": (
-            "In Topic 85, the destination URL is www.digiskills.pk, and the business noted that they previously ran some TikTok campaigns "
-            "but experienced poor ROAS. The prompt asks a senior performance marketing strategist with 8+ years experience to build a detailed strategy."
+            "AMT (Alpha-methyltryptamine) is a tryptamine derivative that shares several similarities with the Schedule I "
+            "tryptamine hallucinogens. Adverse effects of AMT include mild increases in blood pressure or respiration "
+            "rate, restlessness, tachycardia, severe nausea, severe vomiting, impaired coordination, and visual and "
+            "auditory disturbances and distortions. AMT has been associated with fatal intoxications, although other "
+            "drugs were present. The 36th ECDD (June 2014) recommended that, due to the insufficiency of evidence required "
+            "to satisfy the criteria for international scheduling under the Conventions, AMT not be placed under "
+            "international control but be kept under surveillance."
         ),
     },
 ]
 
 # -------------------------------------------------------------
-# 2. RAG GENERATION PROMPT (Matching Production NexusAI Pipeline)
+# 2. DENSE-ONLY BENCHMARK GENERATION PROMPT (independent of the app UI)
 # -------------------------------------------------------------
 RAG_SYSTEM_PROMPT = ChatPromptTemplate.from_template(
     """You are NexusAI, an accurate and concise enterprise knowledge assistant.
@@ -139,9 +164,11 @@ Provide your judgment in STRICT JSON format with no additional text or Markdown 
 
 def evaluate_sample_with_judge(judge_chain, payload: dict, max_retries: int = 6) -> dict:
     """
-    Executes exact LLM-as-a-judge evaluation without any fallback.
-    Retries gracefully with rate-limit backoff until exact scores and reasoning are obtained.
+    Obtain validated LLM-judge estimates without substituting fabricated scores.
+    Retry invalid outputs and transient provider errors with rate-limit backoff.
     """
+    if max_retries < 1:
+        raise ValueError("max_retries must be positive")
     for attempt in range(max_retries):
         try:
             judge_raw = judge_chain.invoke(payload).strip()
@@ -164,15 +191,17 @@ def evaluate_sample_with_judge(judge_chain, payload: dict, max_retries: int = 6)
             scores = json.loads(cleaned)
 
             required_keys = ["faithfulness", "answer_relevancy", "context_recall", "context_precision"]
-            if all(k in scores for k in required_keys):
-                # Ensure values are valid floats clamped in [0.0, 1.0]
+            if isinstance(scores, dict) and all(k in scores for k in required_keys):
                 for k in required_keys:
-                    scores[k] = max(0.0, min(1.0, float(scores[k])))
+                    value = scores[k]
+                    if isinstance(value, bool) or not isinstance(value, (float, int)) or not math.isfinite(value) or not 0 <= value <= 1:
+                        raise ValueError(f"Invalid judge metric {k}: {value!r}")
+                    scores[k] = float(value)
                 if "reasoning" not in scores or not scores["reasoning"]:
                     scores["reasoning"] = "Evaluated directly by LLM judge."
                 return scores
             else:
-                print(f"  [!] Missing expected keys in judge output: {list(scores.keys())}. Retrying...")
+                raise ValueError("Judge output must be an object containing all four metrics")
 
         except Exception as e:
             err_msg = str(e)
@@ -184,34 +213,36 @@ def evaluate_sample_with_judge(judge_chain, payload: dict, max_retries: int = 6)
             if time_match:
                 wait_sec = max(wait_sec, float(time_match.group(1)) + 2.0)
 
-            print(f"  -> Pausing {wait_sec:.1f}s before retrying to ensure exact results...")
-            time.sleep(wait_sec)
+            if attempt + 1 < max_retries:
+                print(f"  -> Pausing {wait_sec:.1f}s before retrying...")
+                time.sleep(wait_sec)
 
     raise RuntimeError(
         "Evaluation failed to obtain exact LLM judge output after retries. Fallback is disabled."
     )
 
 
-def run_rag_evaluation():
+def _run_rag_evaluation(client):
     print("=" * 70)
     print("[*] NEXUS-AI RAG PIPELINE BENCHMARK EVALUATION")
     print("=" * 70)
 
     qdrant_url = os.getenv("QDRANT_URL")
-    qdrant_key = os.getenv("QDRANT_API_KEY")
     groq_key = os.getenv("GROQ_API_KEY")
 
     if not groq_key:
         raise ValueError("GROQ_API_KEY not found in environment!")
+    if not qdrant_url:
+        raise ValueError("QDRANT_URL is required for the cloud evaluation.")
+    collection_name = os.getenv("QDRANT_COLLECTION", "who_hybrid")
 
     print(f"Connecting to Qdrant Cloud: {qdrant_url}")
     print("Loading embedding model 'all-MiniLM-L6-v2'...")
     embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
-    client = QdrantClient(url=qdrant_url, api_key=qdrant_key)
     vectorstore = QdrantVectorStore(
         client=client,
-        collection_name="enterprise_knowledge_base",
+        collection_name=collection_name,
         embedding=embeddings,
     )
 
@@ -221,6 +252,8 @@ def run_rag_evaluation():
         api_key=groq_key,
         base_url="https://api.groq.com/openai/v1",
         temperature=0.1,
+        timeout=60,
+        max_retries=2,
     )
     rag_chain = RAG_SYSTEM_PROMPT | generator_llm | StrOutputParser()
 
@@ -230,6 +263,8 @@ def run_rag_evaluation():
         api_key=groq_key,
         base_url="https://api.groq.com/openai/v1",
         temperature=0.0,
+        timeout=60,
+        max_retries=2,
         model_kwargs={"response_format": {"type": "json_object"}},
     )
     judge_chain = JUDGE_PROMPT | judge_llm | StrOutputParser()
@@ -247,8 +282,8 @@ def run_rag_evaluation():
         # Add pause between questions to respect Groq rate limits
         time.sleep(4)
 
-        # Step A: Vector Retrieval (Top k=4)
-        retrieved_docs = vectorstore.similarity_search(question, k=4)
+        # Step A: Vector Retrieval (Top k=8)
+        retrieved_docs = vectorstore.similarity_search(question, k=8)
         context_str = "\n\n---\n\n".join([d.page_content for d in retrieved_docs])
         print(f"  -> Retrieved Chunks: {len(retrieved_docs)} (Total Characters: {len(context_str)})")
 
@@ -274,7 +309,7 @@ def run_rag_evaluation():
         cp = float(scores["context_precision"])
         composite = round((f + ar + cr + cp) / 4.0, 3)
 
-        print(f"  -> Exact Scores: Faithfulness: {f:.2f} | Relevancy: {ar:.2f} | Recall: {cr:.2f} | Precision: {cp:.2f} => Overall: {composite:.3f}")
+        print(f"  -> Judge Scores: Faithfulness: {f:.2f} | Relevancy: {ar:.2f} | Recall: {cr:.2f} | Precision: {cp:.2f} => Overall: {composite:.3f}")
         print(f"  -> Judge Reasoning: {scores.get('reasoning', 'N/A')}")
 
         results.append({
@@ -311,7 +346,7 @@ def run_rag_evaluation():
 
 
     # Save to eval_results directory
-    out_dir = Path("eval_results")
+    out_dir = Path(__file__).resolve().parent / "eval_results"
     out_dir.mkdir(exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -322,7 +357,7 @@ def run_rag_evaluation():
         "timestamp": timestamp,
         "model": "openai/gpt-oss-120b",
         "embeddings": "all-MiniLM-L6-v2",
-        "retriever": "Qdrant (k=4, Cosine)",
+        "retriever": "Qdrant (k=8, Cosine)",
         "averages": {
             "faithfulness": avg_f,
             "answer_relevancy": avg_ar,
@@ -341,7 +376,7 @@ def run_rag_evaluation():
 **Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  
 **LLM Evaluated:** `openai/gpt-oss-120b` (via Groq)  
 **Embeddings:** `all-MiniLM-L6-v2` (Dense 384-dim)  
-**Vector Store:** Qdrant Cloud (`enterprise_knowledge_base`)  
+**Vector Store:** Qdrant Cloud (`{collection_name}`)
 
 ---
 
@@ -380,6 +415,17 @@ def run_rag_evaluation():
     print(f"\nSaved JSON report to: {report_json_path}")
     print(f"Saved Markdown report to: {report_md_path}")
     return summary_data
+
+
+def run_rag_evaluation():
+    url = os.getenv("QDRANT_URL")
+    if not url or not os.getenv("GROQ_API_KEY"):
+        raise ValueError("QDRANT_URL and GROQ_API_KEY are required for cloud evaluation.")
+    client = QdrantClient(url=url, api_key=os.getenv("QDRANT_API_KEY") or None, timeout=30)
+    try:
+        return _run_rag_evaluation(client)
+    finally:
+        client.close()
 
 
 if __name__ == "__main__":
